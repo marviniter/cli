@@ -61,7 +61,7 @@ func WriteTable(writer io.Writer, csvContent string) {
 
 func TruncateString(str string, maxLength int) string {
 	strLength := len(str)
-	if strLength <= maxLength {
+	if strLength <= maxLength || maxLength <= 3 {
 		return str
 	}
 
