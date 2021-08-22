@@ -229,7 +229,7 @@ func DashboardForwardTestOnSocket(opts TestOptions) func(t *testing.T) {
 			err := cmd.Start()
 			if err != nil {
 				t.Logf("start dapr dashboard error %s", err)
-				t.FailNow()
+				return
 			}
 
 			cmd.Wait()
