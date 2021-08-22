@@ -9,8 +9,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -22,6 +24,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/dapr/cli/tests/e2e/spawn"
+	"github.com/dapr/cli/utils"
 
 	k8s "k8s.io/client-go/kubernetes"
 
@@ -127,6 +130,7 @@ func GetTestsOnInstall(details VersionDetails, opts TestOptions) []TestCase {
 		{"install " + details.RuntimeVersion, installTest(details, opts)},
 		{"crds exist " + details.RuntimeVersion, CRDTest(details, opts)},
 		{"clusterroles exist " + details.RuntimeVersion, ClusterRolesTest(details, opts)},
+		{"clusterroles exist " + details.RuntimeVersion, DashboardForwardTestOnSocket(opts)},
 		{"clusterrolebindings exist " + details.RuntimeVersion, ClusterRoleBindingsTest(details, opts)},
 		{"apply and check components exist " + details.RuntimeVersion, ComponentsTestOnInstallUpgrade(opts)},
 		{"check mtls " + details.RuntimeVersion, MTLSTestOnInstallUpgrade(opts)},
@@ -208,6 +212,46 @@ func ComponentsTestOnInstallUpgrade(opts TestOptions) func(t *testing.T) {
 		output, err := spawn.Command(daprPath, "components", "-k")
 		require.NoError(t, err, "expected no error on calling dapr components")
 		componentOutputCheck(t, output, false)
+	}
+}
+
+func DashboardForwardTestOnSocket(opts TestOptions) func(t *testing.T) {
+	return func(t *testing.T) {
+		daprPath := getDaprPath()
+		listenPort := "5555"
+		listenAddress := "0.0.0.0"
+		args := []string{"dashboard", "-k", "-p", listenPort, "-a", listenAddress}
+		cmd := exec.Command(daprPath, args...)
+
+		defer func() {
+			// stop the dashboard process
+			cmd.Process.Kill()
+		}()
+
+		go func() {
+			// spawn.Command(daprPath, "dashboard", "-p", listenPort, "-a", listenAddress)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+
+			err := cmd.Start()
+			require.NoError(t, err, "expected no error status on dashboard start")
+
+			err = cmd.Wait()
+			require.NoError(t, err, "expected no error status on dashboard wait")
+		}()
+
+		time.Sleep(3 * time.Second)
+
+		sockets, err := utils.GetDefineProtocolSockets("tcp")
+		require.NoError(t, err, "expected no error status on get sockets")
+		var isSocketListen bool
+		for _, socket := range sockets {
+			if socket.IP == listenAddress && strconv.Itoa(int(socket.Port)) == listenPort {
+				isSocketListen = true
+				break
+			}
+		}
+		assert.True(t, isSocketListen)
 	}
 }
 
