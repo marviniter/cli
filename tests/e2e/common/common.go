@@ -222,27 +222,24 @@ func DashboardForwardTestOnSocket(opts TestOptions) func(t *testing.T) {
 		listenAddress := "0.0.0.0"
 		args := []string{"dashboard", "-k", "-p", listenPort, "-a", listenAddress, "-n", DaprTestNamespace}
 		cmd := exec.Command(daprPath, args...)
-
-		defer func() {
-			// stop the dashboard process
-			cmd.Process.Kill()
-		}()
-
 		go func() {
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 
 			err := cmd.Start()
-			require.NoError(t, err, "expected no error status on dashboard start")
+			if err != nil {
+				t.Logf("start dapr dashboard error %s", err)
+				t.FailNow()
+			}
 
-			err = cmd.Wait()
-			require.NoError(t, err, "expected no error status on dashboard wait")
+			cmd.Wait()
 		}()
 
 		time.Sleep(3 * time.Second)
 
 		sockets, err := utils.GetDefineProtocolSockets("tcp")
 		require.NoError(t, err, "expected no error status on get sockets")
+
 		var isSocketListen bool
 		for _, socket := range sockets {
 			if socket.IP == listenAddress && strconv.Itoa(int(socket.Port)) == listenPort {
@@ -250,6 +247,9 @@ func DashboardForwardTestOnSocket(opts TestOptions) func(t *testing.T) {
 				break
 			}
 		}
+
+		// stop the dashboard process
+		cmd.Process.Kill()
 		assert.True(t, isSocketListen)
 	}
 }
