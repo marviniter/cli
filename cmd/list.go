@@ -77,7 +77,7 @@ dapr list -k --all-namespaces
 
 			list, err := kubernetes.List(resourceNamespace)
 			if err != nil {
-				print.FailureStatusEvent(os.Stdout, err.Error())
+				print.FailureStatusEvent(os.Stderr, err.Error())
 				os.Exit(1)
 			}
 
@@ -85,7 +85,7 @@ dapr list -k --all-namespaces
 		} else {
 			list, err := standalone.List()
 			if err != nil {
-				print.FailureStatusEvent(os.Stdout, err.Error())
+				print.FailureStatusEvent(os.Stderr, err.Error())
 				os.Exit(1)
 			}
 

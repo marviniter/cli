@@ -29,7 +29,7 @@ var ConfigurationsCmd = &cobra.Command{
 			}
 			err := kubernetes.PrintConfigurations(configurationName, resourceNamespace, configurationOutputFormat)
 			if err != nil {
-				print.FailureStatusEvent(os.Stdout, err.Error())
+				print.FailureStatusEvent(os.Stderr, err.Error())
 				os.Exit(1)
 			}
 		}
